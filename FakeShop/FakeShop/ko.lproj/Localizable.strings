@@ -1,0 +1,79 @@
+/*
+  Localizable.strings
+  FakeShop
+
+  Created by 이태형 on 4/10/25.
+  
+*/
+//Intro
+"FakeShop" = "페이크샵";
+"Wellcome!" = "환영합니다!";
+"'%@' is a fake shopping app that uses '%@'. %@" = "'%@'은 '%@'을 사용한 가짜 쇼핑 앱입니다. %@";
+
+//Auth
+"Privacy Policy" = "개인정보 처리방침";
+"Terms of Service" = "서비스 이용약관";
+"I accept the %@ and the %@." = "%@과 %@에 동의합니다.";
+"Sign In" = "로그인";
+"Sign Up" = "회원가입";
+"You will not actually be able to register as a member." = "실제로 회원가입이 이뤄지지 않습니다.";
+"Please agree to the Privacy Policy and Terms of Service." = "개인정보 처리방침 및 서비스 이용약관에 동의해주세요.";
+"Please enter your ID" = "id를 입력해주세요.";
+"Please enter your Password" = "비밀번호를 입력해주세요.";
+"Login failed. Please check your network connection." = "로그인에 실패했습니다. 네트워크 연결을 확인해주세요.";
+"Login failed. Please check your ID and password again. If the same problem persists, please contact us." = "로그인에 실패했습니다. 아이디와 비밀번호를 다시 한번 확인해주세요. 같은 현상이 계속되는 경우 문의 바랍니다.";
+
+//SignUp
+"8+ characters, letters and numbers" = "영문, 숫자 조합 8자 이상";
+"8+ characters, letters, numbers, and special characters." = "영문, 숫자, 특수기호 포함 8자 이상";
+"Re-enter password" = "한번 더 입력해주세요";
+"First Name" = "이름";
+"Last Name" = "성";
+"Address" = "주소";
+
+"8~20 characters using upper/lowercase letters and numbers." = "영문 대소문자, 숫자 조합 8~20자로 입력해주세요";
+"At least 8 characters, including upper/lowercase letters, numbers, and special characters." = "영문 대소문자, 숫자, 특수문자 포함 8자 이상";
+"Passwords do not match." = "위의 비밀번호와 일치하지 않습니다.";
+"Invalid first name format." = "올바른 이름형식이 아닙니다.";
+"Invalid last name format." = "올바른 성씨형식이 아닙니다.";
+"Invalid adress format." = "올바른 주소형식이 아닙니다.";
+
+"Invalid ID. Please enter 8~20 characters using upper/lowercase letters and numbers." = "잘못된 id 입력입니다. 영문 대소문자, 숫자 조합 8~20자로 입력해주세요.";
+"Invalid password. Please enter at least 8 characters, including upper/lowercase letters, numbers, and special characters." = "잘못된 password 입력입니다. 영문, 숫자, 특수문자 포함 8자 이상 입력해주세요.";
+"Passwords do not match" = "비밀번호와 비밀번호 재확인란이 일치하지 않습니다.";
+"Please enter your first name (at least one character)." = "이름란이 비어었습니다. 한글자 이상 입력해주세요.";
+"Please enter your last name (at least one character)." = "성씨란이 비어었습니다. 한글자 이상 입력해주세요.";
+"Invalid email format." = "올바른 이메일 형식이 아닙니다.";
+"Invalid phone number format." = "올바른 핸드폰 번호 형식이 아닙니다.";
+"Sign-up complete. You can now log in with your new account." = "회원가입이 완료되었습니다. 이제 새 계정으로 로그인하실 수 있습니다.";
+
+//category
+"Category" = "카테고리";
+"all" = "전체";
+"electronics" = "디지털";
+"jewelery" = "브랜드 쥬얼리";
+"men's clothing" = "남성 의류";
+"women's clothing" = "여성 의류";
+
+//setting
+"orderHistory" = "주문내역";
+"cart" = "장바구니";
+"inquiryHistory" = "문의내역";
+"logout" = "로그아웃";
+"Would you like to sign out?" = "로그아웃 하시겠습니까?";
+
+//sort
+"Newest Arrivals" = "신규 상품순";
+"Price: High To Low" = "높은 가격순";
+"Price: Low to High" = "낮은 가격순";
+"Avg. Customer Review" = "평점 높은순";
+"Best Sellers" = "판매 인기순";
+
+//etc
+"more" = "더 보기";
+"buy" = "구매하기";
+"error" = "오류";
+"Apply" = "적용하기";
+"Sort by" = "정렬기준";
+"Confirm" = "확인";
+"Cancel" = "취소";

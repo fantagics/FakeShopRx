@@ -1,0 +1,32 @@
+/* 
+  Localizable.strings
+  FakeShop
+
+  Created by 이태형 on 4/10/25.
+  
+*/
+
+//category
+"Category" = "Category";
+"all" = "All";
+"electronics" = "Electronics";
+"jewelery" = "Jewelery";
+"men's clothing" = "Men's clothing";
+"women's clothing" = "Women's clothing";
+//setting
+"orderHistory" = "Order History";
+"cart" = "Add to Cart";
+"inquiryHistory" = "Inquiry History";
+"logout" = "Logout";
+//sort
+"Newest Arrivals" = "Newest Arrivals";
+"Price: High To Low" = "Price: High To Low";
+"Price: Low to High" = "Price: Low to High";
+"Avg. Customer Review" = "Avg. Customer Review";
+"Best Sellers" = "Best Sellers";
+//etc
+"more" = "More";
+"buy" = "Buy Now";
+"error" = "Error";
+"Apply" = "Apply";
+"Sort by" = "Sort by";
