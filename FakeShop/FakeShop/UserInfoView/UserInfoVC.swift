@@ -6,9 +6,14 @@
 //
 
 import UIKit
+import RxSwift
+import RxCocoa
 
 class UserInfoVC: UIViewController {
-    private let vm: LoginVM = LoginVM()
+    private let viewModel: UserInfoViewModel = UserInfoViewModel()
+    private let loginViewModel: LoginViewModel = LoginViewModel()
+    private let disposeBag = DisposeBag()
+    private var settingMenus: [SettingMenu] = []
     
     private let userInfoTableView: UITableView = UITableView()
     
@@ -25,9 +30,74 @@ class UserInfoVC: UIViewController {
     
 }
 
-//MARK: - Func
+//MARK: - BindViewModel
 extension UserInfoVC{
-    
+    private func bindViewModel(){
+        let input = UserInfoViewModel.Input(
+            selectedRow: userInfoTableView.rx.itemSelected.asObservable()
+        )
+        let output = viewModel.tableViewLogic(input: input)
+        
+        output.settingMenus
+            .drive(userInfoTableView.rx.items){ tableView, row, item in
+                if row == 0{
+                    guard let cell: UserInfoTableCell = tableView.dequeueReusableCell(withIdentifier: UserInfoTableCell.identifier) as? UserInfoTableCell else{return UITableViewCell()}
+                    cell.accessoryType = .disclosureIndicator
+                    cell.selectionStyle = .none
+                    return cell
+                } else {
+                    guard let cell: SettingMenuTableCell = tableView.dequeueReusableCell(withIdentifier: SettingMenuTableCell.identifier) as? SettingMenuTableCell else{return UITableViewCell()}
+                    cell.accessoryType = .none
+                    cell.selectionStyle = .none
+                    cell.iconView.image = UIImage(systemName: item.icon, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22))
+                    cell.titleLabel.text = item.str.localized()
+                    return cell
+                }
+            }
+            .disposed(by: disposeBag)
+        
+        output.didTapUserInfo
+            .drive(onNext: {[weak self] _ in
+                guard let self = self else { return }
+                print("did Tap UserInfoView")
+            })
+            .disposed(by: disposeBag)
+        
+        output.didTapMenu
+            .drive(onNext: {[weak self] item in
+                guard let self = self else { return }
+                if item == .logout{
+                    let logoutAlert: UIAlertController = UIAlertController.cancelableMessageAlert(
+                        title: "logout".localized(),
+                        message: "Would you like to sign out?".localized(),
+                        completion: {
+                            self.loginViewModel.logout()
+                        })
+                    self.present(logoutAlert, animated: true)
+                }
+            })
+            .disposed(by: disposeBag)
+        
+        loginViewModel.logoutResult
+            .observe(on: MainScheduler.instance)
+            .subscribe(onNext: { [weak self] res in
+                switch res{
+                case .success:
+                    let nextvc = LoginVC()
+                    (UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate)?.changeRootView(nextvc, animated: false)
+                case .failure(let err):
+                    self?.present(UIAlertController.messageAlert(title: nil, message: err.localizedDescription, completion: nil), animated: true)
+                    
+                }
+            })
+            .disposed(by: disposeBag)
+        
+//        userInfoTableView.rx.itemSelected
+//            .bind(to: Binder(self) { owner, indexPath in
+//                owner.userInfoTableView.deselectRow(at: indexPath, animated: true)
+//            })
+//            .disposed(by: disposeBag)
+    }
 }
 
 //MARK: - inital_UI
@@ -36,6 +106,7 @@ extension UserInfoVC{
         setNavigation()
         setAttribute()
         setUI()
+        bindViewModel()
     }
     //Navigation
     private func setNavigation(){
@@ -63,12 +134,10 @@ extension UserInfoVC{
         
         [userInfoTableView].forEach{
             $0.backgroundColor = .white
-            $0.dataSource = self
-            $0.delegate = self
-            $0.register(SettingMenuTableCell.self, forCellReuseIdentifier: SettingMenuTableCell.identifier)
-            $0.register(UserInfoTableCell.self, forCellReuseIdentifier: UserInfoTableCell.identifier)
             $0.bounces = false
             $0.separatorStyle = .none
+            $0.register(SettingMenuTableCell.self, forCellReuseIdentifier: SettingMenuTableCell.identifier)
+            $0.register(UserInfoTableCell.self, forCellReuseIdentifier: UserInfoTableCell.identifier)
         }
     }
     //UI
@@ -82,73 +151,5 @@ extension UserInfoVC{
             userInfoTableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             userInfoTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
         ])
-    }
-}
-
-//MARK: - DataSource & Delegate
-extension UserInfoVC: UITableViewDataSource{
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 5
-    }
-    
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        if indexPath.row == 0 {
-            guard let cell: UserInfoTableCell = tableView.dequeueReusableCell(withIdentifier: UserInfoTableCell.identifier, for: indexPath) as? UserInfoTableCell else{return UITableViewCell()}
-            cell.accessoryType = .disclosureIndicator
-            cell.selectionStyle = .none
-            return cell
-        } else{
-            guard let cell: SettingMenuTableCell = tableView.dequeueReusableCell(withIdentifier: SettingMenuTableCell.identifier, for: indexPath) as? SettingMenuTableCell else{return UITableViewCell()}
-            cell.accessoryType = .none
-            cell.selectionStyle = .none
-            if let img = SettingMenu(rawValue: indexPath.row - 1)?.icon{
-                cell.iconView.image = UIImage(systemName: img, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22))
-            }
-            if let title = SettingMenu(rawValue: indexPath.row - 1)?.str{
-                cell.titleLabel.text = title.localized()
-            }
-            return cell
-        }
-    }
-    
-}
-extension UserInfoVC: UITableViewDelegate{
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print(#function)
-        if indexPath.row > 0, SettingMenu(rawValue: indexPath.row - 1) == .logout {
-            let logoutAlert: UIAlertController = UIAlertController.cancelableMessageAlert(title: "logout".localized(), message: "Would you like to sign out?".localized(), completion: {
-                self.vm.logout()
-                let nextvc = LoginVC()
-                (UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate)?.changeRootView(nextvc, animated: false)
-            })
-            self.present(logoutAlert, animated: true)
-        }
-    }
-}
-
-extension UserInfoVC{
-    enum SettingMenu: Int, CaseIterable{
-        case orderHistory
-        case cart
-        case inquiryHistory
-        case logout
-        
-        var str: String{
-            switch self{
-                case .orderHistory: "orderHistory"
-                case .cart: "cart"
-                case .inquiryHistory: "inquiryHistory"
-                case .logout: "logout"
-            }
-        }
-        
-        var icon: String{
-            switch self{
-            case .orderHistory: "list.bullet"
-                case .cart: "cart"
-                case .inquiryHistory: "info.circle"
-                case .logout: "rectangle.portrait.and.arrow.right"
-            }
-        }
     }
 }

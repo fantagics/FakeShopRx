@@ -66,7 +66,7 @@ class AuthRequest{
         }
         
         AF.request(request).responseDecodable(of: UserToken.self){res in
-            print(res.response?.statusCode) //401: wrong params
+            print(res.response?.statusCode) //401: wrong params (When Wrong userAccount)
             switch res.result{
             case .success(let data):
                 completion(.success(data))
@@ -105,6 +105,30 @@ class AuthRequestRx{
             AF.request(URL.signUpUrl, method: .post, parameters: params, encoding: JSONEncoding.default)
                 .validate(statusCode: 200..<300)
                 .responseDecodable(of: SignUpRes.self) { res in
+                    switch res.result {
+                    case .success(let data):
+                        observer.onNext(data)
+                        observer.onCompleted()
+                    case .failure(let error):
+                        observer.onError(error)
+                    }
+                }
+            return Disposables.create()
+        }
+    }
+    
+    func loginNative(id: String, pw: String) -> Observable<UserToken>{
+        var params: [String:String] = [:]
+#if DEBUG
+        params = ["username": "mor_2314", "password": "83r5^_"]
+#else
+        params = ["username": id, "password": pw]
+#endif
+        
+        return Observable.create { observer in
+            AF.request(URL.logInUrl, method: .post, parameters: params, encoding: JSONEncoding.default)
+                .validate(statusCode: 200..<300)
+                .responseDecodable(of: UserToken.self) { res in
                     switch res.result {
                     case .success(let data):
                         observer.onNext(data)

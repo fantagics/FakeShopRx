@@ -6,16 +6,22 @@
 //
 
 import UIKit
-import SwiftUI
+//import SwiftUI
+import RxSwift
+import RxCocoa
 import SafariServices
 
 class LoginVC: UIViewController {
+    private let viewModel: LoginViewModel = LoginViewModel()
+    private let disposeBag: DisposeBag = DisposeBag()
+    
+    private let agreementChecked = BehaviorRelay<Bool>(value: false)
     
     private let introView: UIView = UIView()
     private let loginPannel: UIView = UIView()
     private let welcomeLabel: UILabel = UILabel()
     private let descLabel: UILabel = UILabel()
-    private let nameField: UITextField = UITextField()
+    private let usernameField: UITextField = UITextField()
     private let passwordField: UITextField = UITextField()
     private let agreeButton: UIButton = UIButton()
     private let termsLabel: UILabel = UILabel()
@@ -24,10 +30,11 @@ class LoginVC: UIViewController {
     private let googleButton: UIButton = UIButton()
     private let kakaoButton: UIButton = UIButton()
     private let appleButton: UIButton = UIButton()
+    private let loadingView: UIView = UIView()
+    private let loadingIndicator: UIActivityIndicatorView = UIActivityIndicatorView()
     
-    private lazy var tapGesture: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(didTapEmptySpace(_:)))
-    
-    private let vm: LoginVM = LoginVM()
+    private let emptyViewGesture: UITapGestureRecognizer = UITapGestureRecognizer()
+    private let termsGesture: UITapGestureRecognizer = UITapGestureRecognizer()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -45,75 +52,113 @@ class LoginVC: UIViewController {
 }
 
 #Preview("LoginView"){
-    return LoginVC()
+    return UINavigationController(rootViewController: LoginVC())
 }
 
-//MARK: - Function
+//MARK: - BindVM
 extension LoginVC{
-    @objc private func didTapEmptySpace(_ sender: UIGestureRecognizer){
-        self.view.endEditing(true)
-    }
-    
-    @objc private func didTapTermsCheckBox(_ sender: UIButton){
-        vm.isAgreeTerms.toggle()
-        agreeButton.setImage(UIImage(systemName: vm.isAgreeTerms ? "checkmark.square" : "square"), for: .normal)
-    }
-    
-    @objc private func didTapLinkLabel(_ sender: UIGestureRecognizer){
-        let point = sender.location(in: termsLabel)
-        if let serviceRect = termsLabel.boundingRectForCharacterRange(subText: "Terms of Service".localized()),
-           serviceRect.contains(point){
-            present(SFSafariViewController(url: URL.serviceTermsUrl), animated: true)
-        }
-        if let serviceRect = termsLabel.boundingRectForCharacterRange(subText: "Privacy Policy".localized()),
-           serviceRect.contains(point){
-            present(SFSafariViewController(url: URL.privateTermsUrl), animated: true)
-        }
-    }
-    
-    @objc private func didTapButton(_ sender: UIButton){
-        switch sender{
-        case loginButton:
-            vm.loginValid(loginType: .email, idTextField: nameField, pwTextField: passwordField){ res in
-                switch res{
-                case .success(_):
+    private func bindViewModel(){
+        emptyViewGesture.rx.event
+            .bind{ [weak self] _ in
+                self?.view.endEditing(true)
+            }
+            .disposed(by: disposeBag)
+        
+        signupButton.rx.tap
+            .subscribe(onNext: {
+//                let nextVC = UIHostingController(rootView: SignUpSV())
+                let nextVC = SignUpVC()
+                self.navigationController?.pushViewController(nextVC, animated: true)
+            })
+            .disposed(by: disposeBag)
+        
+        termsGesture.rx.event
+            .bind{ [weak self] sender in
+                guard let self = self else{ return }
+                let point = sender.location(in: termsLabel)
+                if let serviceRect = termsLabel.boundingRectForCharacterRange(subText: "Terms of Service".localized()),
+                   serviceRect.contains(point){
+                    present(SFSafariViewController(url: URL.serviceTermsUrl), animated: true)
+                }
+                if let serviceRect = termsLabel.boundingRectForCharacterRange(subText: "Privacy Policy".localized()),
+                   serviceRect.contains(point){
+                    present(SFSafariViewController(url: URL.privateTermsUrl), animated: true)
+                }
+            }
+            .disposed(by: disposeBag)
+        
+        agreeButton.rx.tap
+            .withLatestFrom(agreementChecked)
+            .map{ !$0 }
+            .bind(to: agreementChecked)
+            .disposed(by: disposeBag)
+        
+        agreementChecked
+            .map{ UIImage(systemName: $0 ? "checkmark.square" : "square") }
+            .bind(to: agreeButton.rx.image(for: .normal))
+            .disposed(by: disposeBag)
+        
+        let input: LoginInput = LoginInput(
+            idText: usernameField.rx.text.orEmpty.asObservable(),
+            passwordText: passwordField.rx.text.orEmpty.asObservable(),
+            agreementChecked: agreementChecked.distinctUntilChanged().share(replay: 1),
+            loginTap: loginButton.rx.tap.asObservable())
+        let output: LoginOutput = viewModel.loginLogic(input: input)
+        
+        output.loginResult
+            .observe(on: MainScheduler.instance)
+            .subscribe(onNext: { [weak self] res in
+                guard let self = self else{return}
+                
+                switch res {
+                case .success:
                     let nextvc = MainTabBarController()
                     (UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate)?.changeRootView(nextvc, animated: false)
                 case .failure(let err):
-                    self.present(UIAlertController.messageAlert(title: nil, message: err.message.localized(), completion: nil), animated: true)
+                    print("email Login Fail")
+                    self.present(UIAlertController.messageAlert(title: nil, message: err.validMessage, completion: nil), animated: true)
                 }
+            })
+            .disposed(by: disposeBag)
+        
+        output.isLoading.map{!$0}
+            .observe(on: MainScheduler.instance)
+            .bind(to: loadingView.rx.isHidden)
+            .disposed(by: disposeBag)
+        output.isLoading
+            .observe(on: MainScheduler.instance)
+            .bind(to: loadingIndicator.rx.isAnimating)
+            .disposed(by: disposeBag)
+        
+        kakaoButton.rx.tap
+            .bind{ [weak self] in
+                self?.viewModel.loginWithKakao(self?.agreementChecked.distinctUntilChanged().share(replay: 1))
             }
-        case signupButton:
-//            let nextVC = UIHostingController(rootView: SignUpSV())
-            let nextVC = SignUpVC()
-            self.navigationController?.pushViewController(nextVC, animated: true)
-        case googleButton:
-            vm.loginValid(loginType: .google, currentVC: self){ res in
+            .disposed(by: disposeBag)
+        
+        googleButton.rx.tap
+            .bind{ [weak self] in
+                self?.viewModel.loginWithGoogle(self?.agreementChecked.distinctUntilChanged().share(replay: 1), self)
+            }
+            .disposed(by: disposeBag)
+        
+        viewModel.loginResult
+            .observe(on: MainScheduler.instance)
+            .subscribe(onNext: { [weak self] res in
                 switch res{
-                case .success(_):
+                case .success:
                     let nextvc = MainTabBarController()
                     (UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate)?.changeRootView(nextvc, animated: false)
                 case .failure(let err):
-                    self.present(UIAlertController.messageAlert(title: nil, message: err.message, completion: nil), animated: true)
+                    if let error = err as? LoginError{
+                        self?.present(UIAlertController.messageAlert(title: nil, message: error.validMessage, completion: nil), animated: true)
+                    } else {
+                        print("SNS Login Error:", err.localizedDescription)
+                    }
                 }
-            }
-        case kakaoButton:
-            vm.loginValid(loginType: .kakao){ res in
-                switch res{
-                case .success(_):
-                    let nextvc = MainTabBarController()
-                    (UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate)?.changeRootView(nextvc, animated: false)
-                case .failure(let err):
-                    self.present(UIAlertController.messageAlert(title: nil, message: err.message, completion: nil), animated: true)
-                }
-            }
-        case appleButton:
-            print("APPLE LOGIN")
-        default:
-            print("didTapButton : somthing is wrong..")
-        }
+            })
+            .disposed(by: disposeBag)
     }
-    
 }
 
 //MARK: - inital_UI
@@ -122,6 +167,7 @@ extension LoginVC{
         setNavigation()
         setAttribute()
         setUI()
+        bindViewModel()
     }
     //NavigationController
     private func setNavigation(){
@@ -130,7 +176,7 @@ extension LoginVC{
     //Attribute
     private func setAttribute(){
         view.backgroundColor = .white
-        view.addGestureRecognizer(tapGesture)
+        view.addGestureRecognizer(emptyViewGesture)
         
         [welcomeLabel].forEach{
             $0.text = "Wellcome!".localized()
@@ -167,7 +213,7 @@ extension LoginVC{
             $0.sizeToFit()
         }
         
-        [nameField, passwordField].forEach{
+        [usernameField, passwordField].forEach{
             $0.addLeftPadding(20)
             if let clearButton = $0.value(forKeyPath: "_clearButton") as? UIButton{
                 clearButton.setImage(UIImage(systemName: "x.circle"), for: .normal)
@@ -179,21 +225,19 @@ extension LoginVC{
             $0.layer.borderWidth = 2
             $0.layer.borderColor = UIColor.primaryColor?.cgColor
         }
-        nameField.placeholder = "user name"
+        usernameField.placeholder = "user name"
         passwordField.placeholder = "password"
         passwordField.isSecureTextEntry = true
         
         [agreeButton].forEach{
-            $0.setImage(UIImage(systemName: vm.isAgreeTerms ? "checkmark.square" : "square"), for: .normal)
+            $0.setImage(UIImage(systemName: "square"), for: .normal)
             $0.tintColor = .primaryColor
-            $0.addTarget(self, action: #selector(didTapTermsCheckBox(_:)), for: .touchUpInside)
         }
         
         [termsLabel].forEach{
             $0.numberOfLines = 0
             $0.isUserInteractionEnabled = true
-            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapLinkLabel(_:)))
-            $0.addGestureRecognizer(tapGesture)
+            $0.addGestureRecognizer(termsGesture)
             
             let privateTerm = "Privacy Policy".localized()
             let serviceTerm = "Terms of Service".localized()
@@ -222,25 +266,34 @@ extension LoginVC{
             $0.setTitleColor(.white, for: .normal)
             $0.titleLabel?.font = .boldSystemFont(ofSize: 20)
             $0.layer.cornerRadius = 20
-            $0.addTarget(self, action: #selector(didTapButton(_:)), for: .touchUpInside)
         }
         
         [signupButton].forEach{
             $0.setTitle("Sign Up".localized(), for: .normal)
             $0.titleLabel?.font = .boldSystemFont(ofSize: 20)
             $0.setTitleColor(.primaryColor, for: .normal)
-            $0.addTarget(self, action: #selector(didTapButton(_:)), for: .touchUpInside)
         }
         
         [googleButton, kakaoButton, appleButton].forEach{
             $0.layer.cornerRadius = 20
             $0.layer.borderWidth = 0.2
             $0.layer.borderColor = UIColor.lightGray.cgColor
-            $0.addTarget(self, action: #selector(didTapButton(_:)), for: .touchUpInside)
         }
         googleButton.setImage(UIImage(named: "google_logo"), for: .normal)
+        googleButton.setImage(UIImage(named: "google_logo"), for: .highlighted)
         kakaoButton.setImage(UIImage(named: "kakao_logo"), for: .normal)
+        kakaoButton.setImage(UIImage(named: "kakao_logo"), for: .highlighted)
         appleButton.setImage(UIImage(named: "apple_logo"), for: .normal)
+        appleButton.setImage(UIImage(named: "apple_logo"), for: .highlighted)
+        
+        [loadingView].forEach{
+            $0.backgroundColor = .gray.withAlphaComponent(0.9)
+            $0.layer.cornerRadius = 20
+        }
+        [loadingIndicator].forEach{
+            $0.color = .white
+            $0.style = .large
+        }
     }
     //UI
     private func setUI(){
@@ -254,7 +307,7 @@ extension LoginVC{
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
         
-        [nameField, passwordField].forEach{
+        [usernameField, passwordField].forEach{
             loginPannel.addSubview($0)
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
@@ -297,6 +350,14 @@ extension LoginVC{
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
         
+        [loadingView].forEach{
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview($0)
+        }
+        [loadingIndicator].forEach{
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            loadingView.addSubview($0)
+        }
         
         
         NSLayoutConstraint.activate([
@@ -316,15 +377,15 @@ extension LoginVC{
             descLabel.trailingAnchor.constraint(equalTo: welcomeLabel.trailingAnchor),
             descLabel.centerYAnchor.constraint(equalTo: introView.centerYAnchor, constant: 28),
             
-            nameField.topAnchor.constraint(equalTo: loginPannel.topAnchor, constant: 16),
-            nameField.centerXAnchor.constraint(equalTo: loginPannel.centerXAnchor),
-            nameField.leadingAnchor.constraint(equalTo: loginPannel.leadingAnchor, constant: 32),
-            nameField.heightAnchor.constraint(equalToConstant: 50),
+            usernameField.topAnchor.constraint(equalTo: loginPannel.topAnchor, constant: 16),
+            usernameField.centerXAnchor.constraint(equalTo: loginPannel.centerXAnchor),
+            usernameField.leadingAnchor.constraint(equalTo: loginPannel.leadingAnchor, constant: 32),
+            usernameField.heightAnchor.constraint(equalToConstant: 50),
             
-            passwordField.topAnchor.constraint(equalTo: nameField.bottomAnchor, constant: 16),
-            passwordField.leadingAnchor.constraint(equalTo: nameField.leadingAnchor),
-            passwordField.trailingAnchor.constraint(equalTo: nameField.trailingAnchor),
-            passwordField.heightAnchor.constraint(equalTo: nameField.heightAnchor),
+            passwordField.topAnchor.constraint(equalTo: usernameField.bottomAnchor, constant: 16),
+            passwordField.leadingAnchor.constraint(equalTo: usernameField.leadingAnchor),
+            passwordField.trailingAnchor.constraint(equalTo: usernameField.trailingAnchor),
+            passwordField.heightAnchor.constraint(equalTo: usernameField.heightAnchor),
             
             termsAgreement.topAnchor.constraint(equalTo: passwordField.bottomAnchor, constant: 16),
             termsAgreement.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -346,6 +407,13 @@ extension LoginVC{
             appleButton.widthAnchor.constraint(equalTo: appleButton.heightAnchor),
             
             loginBtnStack.bottomAnchor.constraint(equalTo: loginPannel.bottomAnchor, constant: -16),
+            
+            loadingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loadingView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            loadingView.heightAnchor.constraint(equalTo: loadingView.widthAnchor),
+            loadingView.widthAnchor.constraint(equalToConstant: 100),
+            loadingIndicator.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            loadingIndicator.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor),
         ])
     }
 }

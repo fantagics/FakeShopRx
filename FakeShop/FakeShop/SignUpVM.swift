@@ -42,7 +42,7 @@ class SignUpViewModel{
         }.share(replay: 1)
         
         let credentials = Observable.combineLatest(input.idText, input.pwText, input.firstNameText, input.lastNameText, input.emailText, input.addressText, input.phoneText){
-            Credentials(id: $0, pw: $1, firstName: $2, lastName: $3, email: $4, address: $5, phone: $6)
+            SignUpInfomation(id: $0, pw: $1, firstName: $2, lastName: $3, email: $4, address: $5, phone: $6)
         }.share(replay: 1)
         
         let resultSubject = PublishSubject<Result<Void, SignUpError>>()
@@ -89,6 +89,7 @@ class SignUpViewModel{
                 
                 self.loading.accept(true)
                 
+//                return req.signUp(id: info.id, pw: info.pw, firstName: info.firstName, lastName: info.lastName, email: info.email, address: info.address, phone: info.phone)
                 return req.signUpMock(id: info.id, pw: info.pw, firstName: info.firstName, lastName: info.lastName, email: info.email, address: info.address, phone: info.phone)
                     .map{ _ in .success(()) }
                     .catch{ err in
@@ -131,7 +132,7 @@ class SignUpViewModel{
         return text.range(of: pattern, options: .regularExpression) != nil
     }
     
-    struct Credentials {
+    struct SignUpInfomation {
         let id: String
         let pw: String
         let firstName: String

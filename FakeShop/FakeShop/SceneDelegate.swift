@@ -9,6 +9,9 @@ import UIKit
 import KakaoSDKCommon
 import KakaoSDKAuth
 import KakaoSDKUser
+import RxKakaoSDKCommon
+import RxKakaoSDKAuth
+import RxKakaoSDKUser
 import GoogleSignIn
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
@@ -50,7 +53,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             }
             //kakao
             if (AuthApi.isKakaoTalkLoginUrl(url)) {
-                _ = AuthController.handleOpenUrl(url: url)
+//                _ = AuthController.handleOpenUrl(url: url)
+                _ = AuthController.rx.handleOpenUrl(url: url)
             }
         }
     }

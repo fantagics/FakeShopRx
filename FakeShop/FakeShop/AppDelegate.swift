@@ -9,6 +9,9 @@ import UIKit
 import KakaoSDKCommon
 import KakaoSDKAuth
 import KakaoSDKUser
+import RxKakaoSDKCommon
+import RxKakaoSDKAuth
+import RxKakaoSDKUser
 import GoogleSignIn
 
 @main
@@ -27,7 +30,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
         
         guard let nativeAppKey: String = Bundle.main.infoDictionary?["KAKAO_KEY"] as? String else{return true}
-        KakaoSDK.initSDK(appKey: nativeAppKey)
+//        KakaoSDK.initSDK(appKey: nativeAppKey)
+        RxKakaoSDK.initSDK(appKey: nativeAppKey)
         
         return true
     }
@@ -53,7 +57,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
         //kakao sign in
         if (AuthApi.isKakaoTalkLoginUrl(url)) {
-            return AuthController.handleOpenUrl(url: url)
+//            return AuthController.handleOpenUrl(url: url)
+            return AuthController.rx.handleOpenUrl(url: url)
         }
         
         return false

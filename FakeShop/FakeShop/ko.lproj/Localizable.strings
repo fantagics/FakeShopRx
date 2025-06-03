@@ -20,6 +20,8 @@
 "Please agree to the Privacy Policy and Terms of Service." = "개인정보 처리방침 및 서비스 이용약관에 동의해주세요.";
 "Please enter your ID" = "id를 입력해주세요.";
 "Please enter your Password" = "비밀번호를 입력해주세요.";
+"Username must be at least 8 characters long." = "user name을 8자 이상 입력해주세요.";
+"Password must be at least 8 characters long." = "password를 8자 이상 입력해주세요.";
 "Login failed. Please check your network connection." = "로그인에 실패했습니다. 네트워크 연결을 확인해주세요.";
 "Login failed. Please check your ID and password again. If the same problem persists, please contact us." = "로그인에 실패했습니다. 아이디와 비밀번호를 다시 한번 확인해주세요. 같은 현상이 계속되는 경우 문의 바랍니다.";
 
